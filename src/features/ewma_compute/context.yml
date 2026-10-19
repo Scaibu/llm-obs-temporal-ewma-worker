@@ -1,0 +1,59 @@
+feature: ewma_compute
+architecture: hexagonal_backend
+contract_version: "2.1"
+domain:
+  bounded_context: temporal-ewma-worker
+  aggregate_root: EwmaRecord
+entity:
+  name: ewma_baselines
+  owner: data-platform
+  fields:
+    - name: id
+      type: bigint
+      null: no
+      constraint: PK (id)
+    - name: service
+      type: varchar(255)
+      null: no
+      constraint: CHECK (service = btrim(service) AND service <> '')
+    - name: model
+      type: varchar(255)
+      null: no
+      constraint: CHECK (model = btrim(model) AND model <> '')
+    - name: hour_of_week
+      type: smallint
+      null: no
+      constraint: CHECK (hour_of_week >= 0 AND hour_of_week <= 167)
+    - name: ewma_value
+      type: double precision
+      null: no
+      constraint: CHECK (ewma_value >= 0.0)
+    - name: sample_count
+      type: integer
+      null: no
+      default: 1
+      constraint: CHECK (sample_count >= 1)
+    - name: is_cold_start
+      type: boolean
+      null: no
+      default: true
+    - name: updated_at
+      type: timestamptz
+      null: yes
+      default: CURRENT_TIMESTAMP
+  unique_constraints:
+    - name: ewma_baselines_service_model_hour_uk
+      columns: [service, model, hour_of_week]
+invariants:
+  - "alpha must be bounded in (0.0, 1.0]"
+  - "costs and baselines must be finite non-negative numbers: finite(c) and c >= 0.0"
+  - "hour_of_week must be bounded in [0, 167]"
+  - "sample_count must be strictly positive integer >= 1"
+  - "cold start threshold requires >= 7 samples to warm up (sample_count < 7 is cold start)"
+  - "cold start state suppresses anomaly evaluations to prevent premature false alarms"
+  - "noise floor epsilon (default 1e-6) prevents false anomalies on near-zero baseline comparisons"
+  - "service orchestrator coordinates pure domain rules, workflow, and ports"
+ports:
+  - features.ewma_compute.infrastructure.ports.ewma_compute_repository_port.EwmaRepositoryPort
+
+

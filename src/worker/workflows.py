@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from datetime import timedelta
 from temporalio import workflow
 from temporalio.common import RetryPolicy
-from shared.types.ewma_types import EwmaRecord, AnomalyPayload
+from features.ewma_compute.contracts.ewma_compute_types import EwmaRecord, AnomalyPayload
 from features.ewma_compute.service import EwmaService
+
 
 
 @dataclass
@@ -45,28 +46,31 @@ class EwmaBaselineUpdate:
                 "fetch_global_model_avg",
                 args=[model, hour_of_week],
                 start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=DEFAULT_RETRY_POLICY,
             )
 
-            new_record = EwmaService.process_update(0.0, None, global_avg)
-            new_record.service = service
-            new_record.model = model
-            new_record.hour_of_week = hour_of_week
+            new_record = EwmaService.process_update(
+                0.0, None, global_avg, service=service, model=model, hour_of_week=hour_of_week
+            )
 
             await workflow.execute_activity(
                 "upsert_baseline",
                 args=[new_record],
                 start_to_close_timeout=timedelta(seconds=15),
+                retry_policy=DEFAULT_RETRY_POLICY,
             )
         else:
             current_cost = await workflow.execute_activity(
                 "fetch_current_cost_1h",
                 args=[service, model],
                 start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=DEFAULT_RETRY_POLICY,
             )
 
+            effective_baseline = max(existing_record.ewma_value, 1e-6)
             is_anomaly = (
                 not existing_record.is_cold_start
-                and current_cost > 3.0 * existing_record.ewma_value
+                and current_cost > 3.0 * effective_baseline
             )
 
             if is_anomaly:
@@ -74,6 +78,7 @@ class EwmaBaselineUpdate:
                     "fetch_cost_by_cluster_1h",
                     args=[service, model],
                     start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=DEFAULT_RETRY_POLICY,
                 )
 
                 alert_payload = AnomalyPayload(
@@ -82,7 +87,7 @@ class EwmaBaselineUpdate:
                     hour_of_week=hour_of_week,
                     current_cost=current_cost,
                     ewma_value=existing_record.ewma_value,
-                    threshold_value=3.0 * existing_record.ewma_value,
+                    threshold_value=3.0 * effective_baseline,
                     sample_count=existing_record.sample_count,
                     timestamp=workflow.now().isoformat(),
                     cluster_drilldown=cluster_drilldown,
@@ -92,6 +97,7 @@ class EwmaBaselineUpdate:
                     "publish_anomaly_alert",
                     args=[alert_payload],
                     start_to_close_timeout=timedelta(seconds=20),
+                    retry_policy=DEFAULT_RETRY_POLICY,
                 )
 
             new_record = EwmaService.process_update(current_cost, existing_record, 0.0)
@@ -100,7 +106,9 @@ class EwmaBaselineUpdate:
                 "upsert_baseline",
                 args=[new_record],
                 start_to_close_timeout=timedelta(seconds=15),
+                retry_policy=DEFAULT_RETRY_POLICY,
             )
+
 
 
 DEFAULT_RETRY_POLICY = RetryPolicy(

@@ -12,8 +12,8 @@ def main() -> None:
     config = load_config()
     
     base_dir = Path(__file__).resolve().parents[1]
-    migrations_dir = base_dir / "database" / "migrations"
-    lock_file = migrations_dir / "schema.lock"
+    migrations_dir = base_dir / "database" / "migrations" / "sql"
+    lock_file = base_dir / "database" / "schema.lock"
     
     current_version = 0
     if lock_file.exists():
@@ -33,6 +33,7 @@ def main() -> None:
             conn.commit()
         lock_file.write_text("0001\n")
         print("Migration applied successfully.")
+
         
     elif action == "rollback":
         if current_version < 1:

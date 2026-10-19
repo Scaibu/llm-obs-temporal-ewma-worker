@@ -1,5 +1,6 @@
 from features.ewma_compute.service import EwmaService
-from shared.types.ewma_types import EwmaRecord
+from features.ewma_compute.contracts.ewma_compute_types import EwmaRecord
+
 
 
 def test_calculate_new_ewma() -> None:

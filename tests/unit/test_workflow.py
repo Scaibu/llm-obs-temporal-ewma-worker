@@ -4,7 +4,12 @@ from temporalio import activity
 from temporalio.worker import Worker
 from temporalio.testing import WorkflowEnvironment
 from worker.workflows import EwmaBaselineUpdate, EwmaWorkflowInput
-from shared.types.ewma_types import EwmaRecord, ClusterCost, AnomalyPayload
+from features.ewma_compute.contracts.ewma_compute_types import (
+    EwmaRecord,
+    ClusterCost,
+    AnomalyPayload,
+)
+
 
 active_pairs_mock = [("service-a", "model-b")]
 get_baseline_mock_val: EwmaRecord | None = None

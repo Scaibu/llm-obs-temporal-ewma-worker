@@ -78,4 +78,5 @@ if [ -f "$PACKAGE_DIR/scripts/migrate.sh" ]; then
 fi
 
 echo -e "\033[0;32m[temporal-ewma-worker] Starting service on port ${HEALTH_PORT}...\033[0m"
-exec $PYTHON_EXE src/worker/index.py
+exec $PYTHON_EXE src/main.py
+

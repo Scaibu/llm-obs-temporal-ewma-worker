@@ -1,0 +1,37 @@
+version: "1.0"
+service_name: "temporal-ewma-worker"
+description: "Network topology and communication contracts for temporal-ewma-worker"
+
+self:
+  service_name: "temporal-ewma-worker"
+  protocol: "temporal-worker"
+
+dependencies:
+  stateful:
+    database:
+      type: "postgresql"
+      host: "alloydb.llmobs.internal"
+      port: 5432
+      database_name: "ewma_db"
+    clickhouse:
+      type: "clickhouse"
+      host: "clickhouse.llmobs.internal"
+      port: 8123
+      database_name: "default"
+    cache:
+      type: "redis"
+      host: "redis.llmobs.internal"
+      port: 6379
+    temporal:
+      type: "temporal"
+      host: "temporal.llmobs.internal"
+      port: 7233
+      namespace: "default"
+      task_queue: "ewma-tasks"
+    kafka:
+      type: "kafka"
+      host: "kafka.llmobs.internal"
+      port: 9092
+      topics:
+        outbound:
+          - "telemetry.anomalies.ewma"

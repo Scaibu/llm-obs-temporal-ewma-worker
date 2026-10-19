@@ -3,9 +3,10 @@ version: '3.8'
 services:
   ewma-worker:
     build:
-      context: ../..
-      dockerfile: build/Dockerfile
+      context: ../../..
+      dockerfile: deploy/docker/service/Dockerfile
     container_name: temporal-ewma-worker
+
     ports:
       - "8000:8000"
     environment:
